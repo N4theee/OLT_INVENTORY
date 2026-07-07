@@ -139,73 +139,122 @@ class _DepartmentDetailScreenState extends State<DepartmentDetailScreen> {
                 ),
                 const SizedBox(height: 12),
                 SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      PopupMenuButton<String?>(
-                        onSelected: _setStatusFilter,
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
-                            value: null,
-                            child: Text('All Item Statuses'),
-                          ),
-                          ...AppConstants.statusOptions.map(
-                            (s) => PopupMenuItem(value: s, child: Text(s)),
-                          ),
-                        ],
-                        child: Chip(
-                          label: Text(_statusFilter ?? 'Item Status'),
-                          avatar: const Icon(Icons.filter_list, size: 18),
-                        ),
+  scrollDirection: Axis.horizontal,
+  child: Row(
+    children: [
+      FilterChip(
+        label: Text(_statusFilter ?? 'All Item Statuses'),
+        avatar: const Icon(Icons.filter_list, size: 18),
+        onSelected: (_) async {
+          final selected = await showModalBottomSheet<String>(
+            context: context,
+            builder: (context) {
+              return SafeArea(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    ListTile(
+                      title: const Text('All Item Statuses'),
+                      onTap: () => Navigator.pop(context, ''),
+                    ),
+                    ...AppConstants.statusOptions.map(
+                      (s) => ListTile(
+                        title: Text(s),
+                        onTap: () => Navigator.pop(context, s),
                       ),
-                      if (_isCedDepartment) ...[
-                        const SizedBox(width: 8),
-                        PopupMenuButton<String?>(
-                          onSelected: _setCedCategoryFilter,
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(
-                              value: null,
-                              child: Text('All CED Categories'),
-                            ),
-                            ...AppConstants.cedCategories.map(
-                              (c) => PopupMenuItem(value: c, child: Text(c)),
-                            ),
-                          ],
-                          child: Chip(
-                            label: Text(_cedCategoryFilter ?? 'CED Category'),
-                            avatar: const Icon(Icons.category_outlined, size: 18),
-                          ),
-                        ),
-                      ],
-                      const SizedBox(width: 8),
-                      PopupMenuButton<ItemSortOption>(
-                        onSelected: _setSort,
-                        itemBuilder: (context) => const [
-                          PopupMenuItem(
-                            value: ItemSortOption.newest,
-                            child: Text('Newest'),
-                          ),
-                          PopupMenuItem(
-                            value: ItemSortOption.oldest,
-                            child: Text('Oldest'),
-                          ),
-                          PopupMenuItem(
-                            value: ItemSortOption.name,
-                            child: Text('Name'),
-                          ),
-                          PopupMenuItem(
-                            value: ItemSortOption.quantity,
-                            child: Text('Quantity'),
-                          ),
-                        ],
-                        child: Chip(
-                          label: Text(_sortLabel(_sort)),
-                          avatar: const Icon(Icons.sort, size: 18),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+
+          if (selected != null) {
+            _setStatusFilter(selected.isEmpty ? null : selected);
+          }
+        },
+      ),
+      if (_isCedDepartment) ...[
+        const SizedBox(width: 8),
+        FilterChip(
+          label: Text(_cedCategoryFilter ?? 'All CED Categories'),
+          avatar: const Icon(Icons.category_outlined, size: 18),
+          onSelected: (_) async {
+            final selected = await showModalBottomSheet<String>(
+              context: context,
+              builder: (context) {
+                return SafeArea(
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: [
+                      ListTile(
+                        title: const Text('All CED Categories'),
+                        onTap: () => Navigator.pop(context, ''),
+                      ),
+                      ...AppConstants.cedCategories.map(
+                        (c) => ListTile(
+                          title: Text(c),
+                          onTap: () => Navigator.pop(context, c),
                         ),
                       ),
                     ],
                   ),
+                );
+              },
+            );
+
+            if (selected != null) {
+              _setCedCategoryFilter(selected.isEmpty ? null : selected);
+            }
+          },
+        ),
+      ],
+      const SizedBox(width: 8),
+      FilterChip(
+        label: Text(_sortLabel(_sort)),
+        avatar: const Icon(Icons.sort, size: 18),
+        onSelected: (_) async {
+          final selected = await showModalBottomSheet<ItemSortOption>(
+            context: context,
+            builder: (context) {
+              return SafeArea(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    ListTile(
+                      title: const Text('Newest'),
+                      onTap: () =>
+                          Navigator.pop(context, ItemSortOption.newest),
+                    ),
+                    ListTile(
+                      title: const Text('Oldest'),
+                      onTap: () =>
+                          Navigator.pop(context, ItemSortOption.oldest),
+                    ),
+                    ListTile(
+                      title: const Text('Name'),
+                      onTap: () =>
+                          Navigator.pop(context, ItemSortOption.name),
+                    ),
+                    ListTile(
+                      title: const Text('Quantity'),
+                      onTap: () =>
+                          Navigator.pop(context, ItemSortOption.quantity),
+                    ),
+                  ],
                 ),
+              );
+            },
+          );
+
+          if (selected != null) {
+            _setSort(selected);
+          }
+        },
+      ),
+    ],
+  ),
+),
               ],
             ),
           ),

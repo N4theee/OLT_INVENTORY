@@ -1,16 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:olt_inventory/constants/app_colors.dart';
-import 'package:olt_inventory/constants/app_constants.dart';
-import 'package:olt_inventory/models/inventory_item_model.dart';
 import 'package:olt_inventory/models/department_model.dart';
-import 'package:olt_inventory/models/inventory_log_model.dart';
 import 'package:olt_inventory/providers/dashboard_provider.dart';
-import 'package:olt_inventory/screens/item_details_screen.dart';
-import 'package:olt_inventory/utils/date_formatter.dart';
 import 'package:olt_inventory/widgets/app_drawer.dart';
 import 'package:olt_inventory/widgets/dashboard_card.dart';
-import 'package:olt_inventory/widgets/inventory_card.dart';
 import 'package:olt_inventory/widgets/responsive_content.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -56,70 +50,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
             color: AppColors.primaryGold,
             child: ResponsiveContent(
               padding: EdgeInsets.all(responsivePadding(context)),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final isWide = constraints.maxWidth >= 900;
-                  return ListView(
-                    children: [
-                      const _SectionTitle('Overview'),
-                      const SizedBox(height: 12),
-                      _OverviewGrid(stats: provider.stats),
-                      const SizedBox(height: 24),
-                      if (isWide)
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: _RecentItemsSection(
-                                items: provider.recentItems,
-                                onItemTap: (item) => _openItem(context, item),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  _DepartmentBreakdownSection(
-                                    departments: provider.departmentStats,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  _ActivityLogsSection(
-                                    logs: provider.recentLogs,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        )
-                      else ...[
-                        _RecentItemsSection(
-                          items: provider.recentItems,
-                          onItemTap: (item) => _openItem(context, item),
-                        ),
-                        const SizedBox(height: 16),
-                        _DepartmentBreakdownSection(
-                          departments: provider.departmentStats,
-                        ),
-                        const SizedBox(height: 16),
-                        _ActivityLogsSection(logs: provider.recentLogs),
-                      ],
-                      const SizedBox(height: 16),
-                    ],
-                  );
-                },
+              child: ListView(
+                children: [
+                  const _SectionTitle('Overview'),
+                  const SizedBox(height: 12),
+                  _OverviewGrid(stats: provider.stats),
+                  const SizedBox(height: 24),
+                  _DepartmentBreakdownSection(
+                    departments: provider.departmentStats,
+                  ),
+                  const SizedBox(height: 16),
+                ],
               ),
             ),
           );
         },
-      ),
-    );
-  }
-
-  void _openItem(BuildContext context, InventoryItem item) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ItemDetailsScreen(itemId: item.id),
       ),
     );
   }
@@ -178,39 +123,6 @@ class _OverviewGrid extends StatelessWidget {
   }
 }
 
-class _RecentItemsSection extends StatelessWidget {
-  const _RecentItemsSection({
-    required this.items,
-    required this.onItemTap,
-  });
-
-  final List<InventoryItem> items;
-  final ValueChanged<InventoryItem> onItemTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _SectionTitle('Recently Added'),
-        const SizedBox(height: 8),
-        if (items.isEmpty)
-          const _EmptyHint('No items yet.')
-        else
-          ...items.take(5).map(
-                (item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: InventoryCard(
-                    item: item,
-                    onTap: () => onItemTap(item),
-                  ),
-                ),
-              ),
-      ],
-    );
-  }
-}
-
 class _DepartmentBreakdownSection extends StatelessWidget {
   const _DepartmentBreakdownSection({required this.departments});
 
@@ -259,74 +171,6 @@ class _DepartmentBreakdownSection extends StatelessWidget {
                       ),
                     )
                     .toList(),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _ActivityLogsSection extends StatelessWidget {
-  const _ActivityLogsSection({required this.logs});
-
-  final List<InventoryLog> logs;
-
-  @override
-  Widget build(BuildContext context) {
-    final maxHeight = AppConstants.dashboardVisibleLogs *
-        AppConstants.dashboardLogRowHeight;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _SectionTitle('Recent Activity'),
-        const SizedBox(height: 8),
-        if (logs.isEmpty)
-          const _EmptyHint('No activity yet.')
-        else
-          Card(
-            child: SizedBox(
-              height: logs.length <= AppConstants.dashboardVisibleLogs
-                  ? logs.length * AppConstants.dashboardLogRowHeight
-                  : maxHeight,
-              child: ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: logs.length,
-                separatorBuilder: (_, __) => const Divider(height: 16),
-                itemBuilder: (context, index) {
-                  final log = logs[index];
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.circle,
-                        size: 8,
-                        color: AppColors.primaryGold,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              log.description,
-                              style: const TextStyle(fontSize: 13),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${log.action} • ${DateFormatter.formatDateTime(log.createdAt)}',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: AppColors.mutedText,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  );
-                },
               ),
             ),
           ),

@@ -152,6 +152,8 @@ class _AllItemsScreenState extends State<AllItemsScreen> {
 }
 
 class _FilterRow extends StatelessWidget {
+  const _FilterRow();
+
   @override
   Widget build(BuildContext context) {
     return Consumer2<InventoryProvider, DepartmentProvider>(
@@ -160,56 +162,133 @@ class _FilterRow extends StatelessWidget {
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              PopupMenuButton<String?>(
-                onSelected: inventory.setDepartmentFilter,
-                itemBuilder: (context) => [
-                  const PopupMenuItem(value: null, child: Text('All Departments')),
-                  ...departments.departments.map(
-                    (d) => PopupMenuItem(
-                      value: d.id,
-                      child: Text(d.departmentName),
-                    ),
-                  ),
-                ],
-                child: Chip(
-                  label: Text(
-                    inventory.departmentFilter != null
-                        ? departments
-                                .findById(inventory.departmentFilter!)
-                                ?.departmentName ??
-                            'Department'
-                        : 'Department',
-                  ),
-                  avatar: const Icon(Icons.filter_list, size: 18),
+              FilterChip(
+                label: Text(
+                  inventory.departmentFilter != null
+                      ? departments
+                              .findById(inventory.departmentFilter!)
+                              ?.departmentName ??
+                          'Department'
+                      : 'All Departments',
                 ),
+                avatar: const Icon(Icons.apartment_outlined, size: 18),
+                onSelected: (_) async {
+                  final selected = await showModalBottomSheet<String>(
+                    context: context,
+                    builder: (context) {
+                      return SafeArea(
+                        child: ListView(
+                          shrinkWrap: true,
+                          children: [
+                            ListTile(
+                              title: const Text('All Departments'),
+                              onTap: () => Navigator.pop(context, ''),
+                            ),
+                            ...departments.departments.map(
+                              (d) => ListTile(
+                                title: Text(d.departmentName),
+                                onTap: () => Navigator.pop(context, d.id),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+
+                  if (selected != null) {
+                    inventory.setDepartmentFilter(
+                      selected.isEmpty ? null : selected,
+                    );
+                  }
+                },
               ),
               const SizedBox(width: 8),
-              PopupMenuButton<String?>(
-                onSelected: inventory.setStatusFilter,
-                itemBuilder: (context) => [
-                  const PopupMenuItem(value: null, child: Text('All Item Statuses')),
-                  ...AppConstants.statusOptions.map(
-                    (s) => PopupMenuItem(value: s, child: Text(s)),
-                  ),
-                ],
-                child: Chip(
-                  label: Text(inventory.statusFilter ?? 'Item Status'),
-                  avatar: const Icon(Icons.filter_list, size: 18),
-                ),
+              FilterChip(
+                label: Text(inventory.statusFilter ?? 'All Item Statuses'),
+                avatar: const Icon(Icons.filter_list, size: 18),
+                onSelected: (_) async {
+                  final selected = await showModalBottomSheet<String>(
+                    context: context,
+                    builder: (context) {
+                      return SafeArea(
+                        child: ListView(
+                          shrinkWrap: true,
+                          children: [
+                            ListTile(
+                              title: const Text('All Item Statuses'),
+                              onTap: () => Navigator.pop(context, ''),
+                            ),
+                            ...AppConstants.statusOptions.map(
+                              (s) => ListTile(
+                                title: Text(s),
+                                onTap: () => Navigator.pop(context, s),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+
+                  if (selected != null) {
+                    inventory.setStatusFilter(
+                      selected.isEmpty ? null : selected,
+                    );
+                  }
+                },
               ),
               const SizedBox(width: 8),
-              PopupMenuButton<ItemSortOption>(
-                onSelected: inventory.setSort,
-                itemBuilder: (context) => const [
-                  PopupMenuItem(value: ItemSortOption.newest, child: Text('Newest')),
-                  PopupMenuItem(value: ItemSortOption.oldest, child: Text('Oldest')),
-                  PopupMenuItem(value: ItemSortOption.name, child: Text('Name')),
-                  PopupMenuItem(value: ItemSortOption.quantity, child: Text('Quantity')),
-                ],
-                child: Chip(
-                  label: Text(_sortLabel(inventory.sort)),
-                  avatar: const Icon(Icons.sort, size: 18),
-                ),
+              FilterChip(
+                label: Text(_sortLabel(inventory.sort)),
+                avatar: const Icon(Icons.sort, size: 18),
+                onSelected: (_) async {
+                  final selected =
+                      await showModalBottomSheet<ItemSortOption>(
+                    context: context,
+                    builder: (context) {
+                      return SafeArea(
+                        child: ListView(
+                          shrinkWrap: true,
+                          children: [
+                            ListTile(
+                              title: const Text('Newest'),
+                              onTap: () => Navigator.pop(
+                                context,
+                                ItemSortOption.newest,
+                              ),
+                            ),
+                            ListTile(
+                              title: const Text('Oldest'),
+                              onTap: () => Navigator.pop(
+                                context,
+                                ItemSortOption.oldest,
+                              ),
+                            ),
+                            ListTile(
+                              title: const Text('Name'),
+                              onTap: () => Navigator.pop(
+                                context,
+                                ItemSortOption.name,
+                              ),
+                            ),
+                            ListTile(
+                              title: const Text('Quantity'),
+                              onTap: () => Navigator.pop(
+                                context,
+                                ItemSortOption.quantity,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+
+                  if (selected != null) {
+                    inventory.setSort(selected);
+                  }
+                },
               ),
             ],
           ),

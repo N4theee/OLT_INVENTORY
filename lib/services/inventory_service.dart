@@ -14,9 +14,9 @@ class InventoryService {
     SupabaseClient? client,
     LogService? logService,
     StorageService? storageService,
-  })  : _client = client ?? SupabaseService.client,
-        _logService = logService ?? LogService(),
-        _storageService = storageService ?? StorageService();
+  }) : _client = client ?? SupabaseService.client,
+       _logService = logService ?? LogService(),
+       _storageService = storageService ?? StorageService();
 
   final SupabaseClient _client;
   final LogService _logService;
@@ -228,6 +228,7 @@ class InventoryService {
 
     final payload = <String, dynamic>{
       'item_code': itemCode,
+      'item_type_number': ItemCodeGenerator.extractTypeNumber(itemCode),
       'product_name': productName,
       'quantity': quantity,
       'department_id': departmentId,
@@ -396,9 +397,7 @@ class InventoryService {
   }
 
   Future<void> clearAllInventory() async {
-    final items = await _client
-        .from('inventory_items')
-        .select('image_url');
+    final items = await _client.from('inventory_items').select('image_url');
 
     for (final row in items as List) {
       await _storageService.deleteImage(row['image_url'] as String?);
@@ -450,13 +449,14 @@ class InventoryService {
     required String departmentName,
     String? cedCategory,
   }) {
-    if (cedCategory != null && departmentName == AppConstants.cedDepartmentName) {
+    if (cedCategory != null &&
+        departmentName == AppConstants.cedDepartmentName) {
       return 'Added $itemCode — $quantity $productName to CED ($cedCategory)';
     }
     return 'Added $itemCode — $quantity $productName to $departmentName';
   }
 
-  Future<String> generateItemCode({
+   Future<String> generateItemCode({
     required String departmentName,
     required String productName,
     String? cedCategory,
@@ -472,21 +472,36 @@ class InventoryService {
         .select('item_code')
         .ilike('item_code', '$baseCode%');
 
-    final codes = (existing as List)
-        .map((row) => row['item_code'] as String?)
-        .toList();
-    final next = ItemCodeGenerator.nextSequenceNumber(codes, baseCode);
-    return ItemCodeGenerator.formatCode(baseCode, next);
-  }
+    int maxTypeNumber = 0;
 
-  String _formatError(Object error) {
-    if (error is PostgrestException) {
-      return error.message;
+    for (final row in existing as List) {
+      final code = row['item_code'] as String?;
+      if (code == null) continue;
+
+      final escapedBaseCode = RegExp.escape(baseCode);
+      final newFormatPattern = RegExp('^$escapedBaseCode[0-9]{7}\$');
+
+      if (!newFormatPattern.hasMatch(code)) continue;
+
+      final withoutGlobal = code.substring(0, code.length - 5);
+      final typeText = withoutGlobal.substring(withoutGlobal.length - 2);
+      final typeNumber = int.tryParse(typeText) ?? 0;
+
+      if (typeNumber > maxTypeNumber) {
+        maxTypeNumber = typeNumber;
+      }
     }
-    if (error is StorageException) {
-      return error.message;
-    }
-    return error.toString();
+
+    final nextTypeNumber = maxTypeNumber + 1;
+
+    final rpcResult = await _client.rpc('next_inventory_item_number');
+    final globalNumber = (rpcResult as num).toInt();
+
+    return ItemCodeGenerator.formatCode(
+      baseCode: baseCode,
+      typeNumber: nextTypeNumber,
+      globalNumber: globalNumber,
+    );
   }
 
   List<InventoryItem> _mapItems(dynamic response) {
@@ -494,4 +509,13 @@ class InventoryService {
         .map((json) => InventoryItem.fromJson(json as Map<String, dynamic>))
         .toList();
   }
+
+  String _formatError(Object error) {
+    if (error is PostgrestException) {
+      return error.message;
+    }
+
+    return error.toString();
+  }
 }
+

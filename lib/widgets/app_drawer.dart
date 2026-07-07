@@ -110,13 +110,15 @@ class AppDrawer extends StatelessWidget {
   }
 
   void _navigate(BuildContext context, Widget screen, String route) {
-    Navigator.pop(context);
-    if (currentRoute == route) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => screen),
-    );
-  }
+  Navigator.pop(context);
+
+  if (currentRoute == route) return;
+
+  Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => screen),
+  );
+}
 }
 
 class _DrawerTile extends StatelessWidget {

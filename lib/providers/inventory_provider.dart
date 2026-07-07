@@ -110,15 +110,15 @@ class InventoryProvider extends ChangeNotifier {
     loadItems(refresh: true);
   }
 
-  void setDepartmentFilter(String? value) {
-    _departmentFilter = value;
-    loadItems(refresh: true);
-  }
+ void setDepartmentFilter(String? value) {
+  _departmentFilter = value == null || value.isEmpty ? null : value;
+  loadItems(refresh: true);
+}
 
   void setStatusFilter(String? value) {
-    _statusFilter = value;
-    loadItems(refresh: true);
-  }
+  _statusFilter = value == null || value.isEmpty ? null : value;
+  loadItems(refresh: true);
+}
 
   void setSort(ItemSortOption value) {
     _sort = value;

@@ -15,9 +15,7 @@ class ItemCodeGenerator {
   static String getItemPrefix(String productName) {
     final cleaned = productName.replaceAll(RegExp(r'[^a-zA-Z]'), '');
     if (cleaned.isEmpty) return 'ITM';
-    if (cleaned.length >= 3) {
-      return cleaned.substring(0, 3).toUpperCase();
-    }
+    if (cleaned.length >= 3) return cleaned.substring(0, 3).toUpperCase();
     return cleaned.toUpperCase().padRight(3, 'X');
   }
 
@@ -31,25 +29,26 @@ class ItemCodeGenerator {
 
     if (departmentName == AppConstants.cedDepartmentName) {
       final cedCode = getCedCategoryCode(cedCategory);
-      return '${deptCode}_${cedCode}_$itemPrefix';
+      return '$deptCode$cedCode$itemPrefix';
     }
-    return '${deptCode}_$itemPrefix';
+
+    return '$deptCode$itemPrefix';
   }
 
-  static int nextSequenceNumber(List<String?> existingCodes, String baseCode) {
-    var maxNum = 0;
-    for (final code in existingCodes) {
-      if (code == null || !code.startsWith(baseCode)) continue;
-      final match = RegExp(r'(\d+)$').firstMatch(code);
-      if (match != null) {
-        final n = int.tryParse(match.group(1)!) ?? 0;
-        if (n > maxNum) maxNum = n;
-      }
-    }
-    return maxNum + 1;
+  static String formatCode({
+    required String baseCode,
+    required int typeNumber,
+    required int globalNumber,
+  }) {
+    return '$baseCode'
+        '${typeNumber.toString().padLeft(2, '0')}'
+        '${globalNumber.toString().padLeft(5, '0')}';
   }
 
-  static String formatCode(String baseCode, int sequence) {
-    return '$baseCode${sequence.toString().padLeft(2, '0')}';
+  static int extractTypeNumber(String itemCode) {
+    if (itemCode.length < 7) return 1;
+    final withoutGlobal = itemCode.substring(0, itemCode.length - 5);
+    final typeText = withoutGlobal.substring(withoutGlobal.length - 2);
+    return int.tryParse(typeText) ?? 1;
   }
 }
