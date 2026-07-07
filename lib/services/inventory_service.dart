@@ -5,6 +5,7 @@ import 'package:olt_inventory/models/inventory_item_model.dart';
 import 'package:olt_inventory/services/log_service.dart';
 import 'package:olt_inventory/services/storage_service.dart';
 import 'package:olt_inventory/services/supabase_service.dart';
+import 'package:olt_inventory/utils/item_code_generator.dart';
 
 enum ItemSortOption { name, quantity, newest, oldest }
 
@@ -219,7 +220,14 @@ class InventoryService {
       }
     }
 
+    final itemCode = await generateItemCode(
+      departmentName: departmentName,
+      productName: productName,
+      cedCategory: cedCategory,
+    );
+
     final payload = <String, dynamic>{
+      'item_code': itemCode,
       'product_name': productName,
       'quantity': quantity,
       'department_id': departmentId,
@@ -257,6 +265,7 @@ class InventoryService {
         itemId: item.id,
         action: 'Added',
         description: _buildAddedLogDescription(
+          itemCode: itemCode,
           quantity: quantity,
           productName: productName,
           departmentName: departmentName,
@@ -409,7 +418,8 @@ class InventoryService {
     String? cedCategory,
   }) {
     if (search != null && search.trim().isNotEmpty) {
-      query = query.ilike('product_name', '%${search.trim()}%');
+      final term = search.trim();
+      query = query.or('product_name.ilike.%$term%,item_code.ilike.%$term%');
     }
     if (status != null && status.isNotEmpty) {
       query = query.eq('status', status);
@@ -434,15 +444,39 @@ class InventoryService {
   }
 
   String _buildAddedLogDescription({
+    required String itemCode,
     required int quantity,
     required String productName,
     required String departmentName,
     String? cedCategory,
   }) {
     if (cedCategory != null && departmentName == AppConstants.cedDepartmentName) {
-      return 'Added $quantity $productName to CED ($cedCategory)';
+      return 'Added $itemCode — $quantity $productName to CED ($cedCategory)';
     }
-    return 'Added $quantity $productName to $departmentName';
+    return 'Added $itemCode — $quantity $productName to $departmentName';
+  }
+
+  Future<String> generateItemCode({
+    required String departmentName,
+    required String productName,
+    String? cedCategory,
+  }) async {
+    final baseCode = ItemCodeGenerator.buildBaseCode(
+      departmentName: departmentName,
+      productName: productName,
+      cedCategory: cedCategory,
+    );
+
+    final existing = await _client
+        .from('inventory_items')
+        .select('item_code')
+        .ilike('item_code', '$baseCode%');
+
+    final codes = (existing as List)
+        .map((row) => row['item_code'] as String?)
+        .toList();
+    final next = ItemCodeGenerator.nextSequenceNumber(codes, baseCode);
+    return ItemCodeGenerator.formatCode(baseCode, next);
   }
 
   String _formatError(Object error) {

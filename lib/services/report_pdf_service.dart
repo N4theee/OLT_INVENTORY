@@ -309,7 +309,7 @@ class ReportPdfService {
         pw.TableRow(
           decoration: pw.BoxDecoration(color: _lightGray),
           children: [
-            _tableCell('ITEM NO', headerStyle, align: pw.Alignment.center),
+            _tableCell('ITEM ID', headerStyle, align: pw.Alignment.center),
             _tableCell('ITEM NAME/ DESCRIPTION', headerStyle),
             _tableCell('DETAILS', headerStyle),
             _tableCell('ITEM STATUS', headerStyle),
@@ -322,7 +322,11 @@ class ReportPdfService {
           final item = entry.value;
           return pw.TableRow(
             children: [
-              _tableCell('${index + 1}', cellStyle, align: pw.Alignment.center),
+              _tableCell(
+                InventoryReportData.itemIdDisplay(item, index + 1),
+                cellStyle,
+                align: pw.Alignment.center,
+              ),
               _tableCell(item.productName, cellStyle),
               _tableCell(InventoryReportData.itemDetails(item), cellStyle),
               _tableCell(item.status, cellStyle),

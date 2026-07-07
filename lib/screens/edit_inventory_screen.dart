@@ -211,6 +211,15 @@ class _EditInventoryScreenState extends State<EditInventoryScreen> {
                 ),
               const SizedBox(height: 16),
               TextFormField(
+                initialValue: widget.item.itemCode ?? 'Not assigned',
+                readOnly: true,
+                decoration: const InputDecoration(
+                  labelText: 'Item ID',
+                  helperText: 'Auto-assigned when created. Cannot be changed.',
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'Product Name *'),
                 validator: Validators.productName,

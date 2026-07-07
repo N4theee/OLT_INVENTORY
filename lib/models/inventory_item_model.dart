@@ -11,6 +11,7 @@ class InventoryItem {
     this.imageUrl,
     this.notes,
     this.cedCategory,
+    this.itemCode,
     required this.dateAdded,
     required this.lastUpdated,
     this.isDeleted = false,
@@ -26,6 +27,7 @@ class InventoryItem {
   final String? imageUrl;
   final String? notes;
   final String? cedCategory;
+  final String? itemCode;
   final DateTime dateAdded;
   final DateTime lastUpdated;
   final bool isDeleted;
@@ -48,6 +50,7 @@ class InventoryItem {
       imageUrl: json['image_url'] as String?,
       notes: json['notes'] as String?,
       cedCategory: json['ced_category'] as String?,
+      itemCode: json['item_code'] as String?,
       dateAdded: DateTime.parse(json['date_added'] as String),
       lastUpdated: DateTime.parse(json['last_updated'] as String),
       isDeleted: json['is_deleted'] as bool? ?? false,
@@ -65,6 +68,7 @@ class InventoryItem {
       'image_url': imageUrl,
       'notes': notes,
       'ced_category': cedCategory,
+      'item_code': itemCode,
       'date_added': dateAdded.toIso8601String(),
       'last_updated': lastUpdated.toIso8601String(),
       'is_deleted': isDeleted,
@@ -95,6 +99,7 @@ class InventoryItem {
     String? imageUrl,
     String? notes,
     String? cedCategory,
+    String? itemCode,
     DateTime? dateAdded,
     DateTime? lastUpdated,
     bool? isDeleted,
@@ -110,6 +115,7 @@ class InventoryItem {
       imageUrl: imageUrl ?? this.imageUrl,
       notes: notes ?? this.notes,
       cedCategory: cedCategory ?? this.cedCategory,
+      itemCode: itemCode ?? this.itemCode,
       dateAdded: dateAdded ?? this.dateAdded,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       isDeleted: isDeleted ?? this.isDeleted,

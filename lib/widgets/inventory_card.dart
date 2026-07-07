@@ -42,6 +42,18 @@ class InventoryCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    if (item.itemCode != null && item.itemCode!.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        item.itemCode!,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.mutedText,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 4),
                     Text(
                       'Qty: ${item.quantity}',

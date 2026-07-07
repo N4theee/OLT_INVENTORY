@@ -58,7 +58,7 @@ class _AllItemsScreenState extends State<AllItemsScreen> {
               children: [
                 SearchBarWidget(
                   controller: _searchController,
-                  hintText: 'Search by product name...',
+                  hintText: 'Search by name or Item ID...',
                   onChanged: (value) {
                     context.read<InventoryProvider>().setSearch(value);
                   },

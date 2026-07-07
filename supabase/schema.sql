@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS inventory_items (
     ced_category IS NULL
     OR ced_category IN ('Dancers', 'Musicians', 'Sound System', 'Sunday School', 'Technical')
   ),
+  item_code TEXT,
   date_added TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   is_deleted BOOLEAN DEFAULT FALSE
@@ -45,6 +46,8 @@ CREATE INDEX IF NOT EXISTS idx_inventory_items_deleted ON inventory_items(is_del
 CREATE INDEX IF NOT EXISTS idx_inventory_items_status ON inventory_items(status);
 CREATE INDEX IF NOT EXISTS idx_inventory_items_ced_category ON inventory_items(ced_category);
 CREATE INDEX IF NOT EXISTS idx_inventory_items_date_added ON inventory_items(date_added DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_items_item_code ON inventory_items(item_code) WHERE item_code IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_inventory_items_item_code_search ON inventory_items(item_code);
 CREATE INDEX IF NOT EXISTS idx_inventory_logs_created ON inventory_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_inventory_logs_item ON inventory_logs(item_id);
 

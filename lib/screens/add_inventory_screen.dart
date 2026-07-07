@@ -90,7 +90,7 @@ class _AddInventoryScreenState extends State<AddInventoryScreen> {
         deptProvider.findById(_departmentId!)?.departmentName ?? 'Unknown';
     final isCed = isCedDepartmentName(deptName);
 
-    final success = await context.read<InventoryProvider>().addItem(
+    final item = await context.read<InventoryProvider>().addItem(
           productName: _nameController.text.trim(),
           quantity: int.parse(_quantityController.text.trim()),
           departmentId: _departmentId!,
@@ -109,10 +109,11 @@ class _AddInventoryScreenState extends State<AddInventoryScreen> {
 
     final provider = context.read<InventoryProvider>();
 
-    if (success) {
+    if (item != null) {
       context.read<DashboardProvider>().loadDashboard();
+      final idLabel = item.itemCode ?? 'assigned';
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Item added successfully')),
+        SnackBar(content: Text('Item added — ID: $idLabel')),
       );
       _formKey.currentState!.reset();
       setState(() {
@@ -249,6 +250,13 @@ class _AddInventoryScreenState extends State<AddInventoryScreen> {
                 controller: _notesController,
                 decoration: const InputDecoration(labelText: 'Notes'),
                 maxLines: 3,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Item ID is assigned automatically when you save.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.mutedText,
+                    ),
               ),
               const SizedBox(height: 24),
               ElevatedButton(

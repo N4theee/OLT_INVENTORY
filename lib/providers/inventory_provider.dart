@@ -125,7 +125,7 @@ class InventoryProvider extends ChangeNotifier {
     loadItems(refresh: true);
   }
 
-  Future<bool> addItem({
+  Future<InventoryItem?> addItem({
     required String productName,
     required int quantity,
     required String departmentId,
@@ -137,7 +137,7 @@ class InventoryProvider extends ChangeNotifier {
     required String departmentName,
   }) async {
     try {
-      await _service.addItem(
+      final item = await _service.addItem(
         productName: productName,
         quantity: quantity,
         departmentId: departmentId,
@@ -151,11 +151,11 @@ class InventoryProvider extends ChangeNotifier {
       await loadItems(refresh: true);
       _error = null;
       notifyListeners();
-      return true;
+      return item;
     } catch (e) {
       _error = e.toString().replaceFirst('Exception: ', '');
       notifyListeners();
-      return false;
+      return null;
     }
   }
 

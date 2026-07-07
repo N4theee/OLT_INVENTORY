@@ -25,13 +25,13 @@ class ReportCsvService {
     buffer.writeln();
 
     buffer.writeln(
-      'ITEM NO,ITEM NAME/ DESCRIPTION,DETAILS,ITEM STATUS,OWNED BY,REMARKS',
+      'ITEM ID,ITEM NAME/ DESCRIPTION,DETAILS,ITEM STATUS,OWNED BY,REMARKS',
     );
 
     for (var i = 0; i < data.items.length; i++) {
       final item = data.items[i];
       buffer.writeln([
-        '${i + 1}',
+        InventoryReportData.itemIdDisplay(item, i + 1),
         _escape(item.productName),
         _escape(InventoryReportData.itemDetails(item)),
         _escape(item.status),

@@ -186,4 +186,8 @@ class InventoryReportData {
   }
 
   static String ownedBy(InventoryItem item) => item.itemHolder;
+
+  static String itemIdDisplay(InventoryItem item, int fallbackIndex) {
+    return item.itemCode ?? '$fallbackIndex';
+  }
 }

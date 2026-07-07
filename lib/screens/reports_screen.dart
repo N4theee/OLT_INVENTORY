@@ -536,7 +536,7 @@ class _ReportPreview extends StatelessWidget {
                       AppColors.lightGrayCard,
                     ),
                     columns: const [
-                      DataColumn(label: Text('ITEM NO')),
+                      DataColumn(label: Text('ITEM ID')),
                       DataColumn(label: Text('ITEM NAME/ DESCRIPTION')),
                       DataColumn(label: Text('DETAILS')),
                       DataColumn(label: Text('ITEM STATUS')),
@@ -547,7 +547,12 @@ class _ReportPreview extends StatelessWidget {
                       final item = entry.value;
                       return DataRow(
                         cells: [
-                          DataCell(Text('${entry.key + 1}')),
+                          DataCell(Text(
+                            InventoryReportData.itemIdDisplay(
+                              item,
+                              entry.key + 1,
+                            ),
+                          )),
                           DataCell(Text(item.productName)),
                           DataCell(Text(InventoryReportData.itemDetails(item))),
                           DataCell(Text(item.status)),
@@ -601,7 +606,7 @@ class _MobileReportItem extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '$index. ${item.productName}',
+              '${InventoryReportData.itemIdDisplay(item, index)} — ${item.productName}',
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 4),

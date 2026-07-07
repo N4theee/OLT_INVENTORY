@@ -133,7 +133,7 @@ class _DepartmentDetailScreenState extends State<DepartmentDetailScreen> {
               children: [
                 SearchBarWidget(
                   controller: _searchController,
-                  hintText: 'Search items in ${widget.departmentName}...',
+                  hintText: 'Search by name or Item ID in ${widget.departmentName}...',
                   onChanged: _applySearch,
                   onClear: () => _applySearch(''),
                 ),

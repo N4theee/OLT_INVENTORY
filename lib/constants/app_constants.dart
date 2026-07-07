@@ -67,4 +67,22 @@ class AppConstants {
     'CED',
     'Uncategorized',
   ];
+
+  static const Map<String, String> departmentCodes = {
+    'Pastors Department': 'PST',
+    'Board': 'BRD',
+    "Men's Department": 'MEN',
+    "Women's Department": 'WOM',
+    'Youth Department': 'YOF',
+    'CED': 'CED',
+    'Uncategorized': 'UNC',
+  };
+
+  static const Map<String, String> cedCategoryCodes = {
+    'Dancers': 'DNC',
+    'Musicians': 'MSC',
+    'Sound System': 'SND',
+    'Sunday School': 'SUN',
+    'Technical': 'TEC',
+  };
 }

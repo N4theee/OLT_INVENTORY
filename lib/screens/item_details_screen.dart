@@ -112,6 +112,8 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
                           ),
                     ),
                     const SizedBox(height: 16),
+                    if (_item!.itemCode != null && _item!.itemCode!.isNotEmpty)
+                      _DetailRow(label: 'Item ID', value: _item!.itemCode!),
                     _DetailRow(label: 'Quantity', value: '${_item!.quantity}'),
                     _DetailRow(
                       label: 'Department',
