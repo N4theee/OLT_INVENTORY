@@ -6,6 +6,7 @@ class InventoryLog {
     required this.description,
     required this.createdAt,
     this.itemName,
+    this.itemCode,
   });
 
   final String id;
@@ -14,21 +15,18 @@ class InventoryLog {
   final String description;
   final DateTime createdAt;
   final String? itemName;
+  final String? itemCode;
 
   factory InventoryLog.fromJson(Map<String, dynamic> json) {
-    final items = json['inventory_items'];
-    String? name;
-    if (items is Map<String, dynamic>) {
-      name = items['product_name'] as String?;
-    }
-
     return InventoryLog(
-      id: json['id'] as String,
-      itemId: json['item_id'] as String,
-      action: json['action'] as String,
-      description: json['description'] as String,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      itemName: name ?? json['item_name'] as String?,
+      id: json['id']?.toString() ?? '',
+      itemId: json['item_id']?.toString() ?? '',
+      itemName: json['item_name']?.toString(),
+      itemCode: json['item_code']?.toString(),
+      action: json['action']?.toString() ?? 'Activity',
+      description: json['description']?.toString() ?? 'No description',
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+          DateTime.now(),
     );
   }
 }

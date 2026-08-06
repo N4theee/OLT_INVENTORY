@@ -12,27 +12,68 @@ class LogService {
     required String itemId,
     required String action,
     required String description,
+    String? itemName,
+    String? itemCode,
   }) async {
     await _client.from('inventory_logs').insert({
       'item_id': itemId,
+      'item_name': itemName,
+      'item_code': itemCode,
       'action': action,
       'description': description,
     });
   }
 
-  Future<List<InventoryLog>> getLogs({int page = 0, int pageSize = 20}) async {
+  Future<List<InventoryLog>> getLogs({
+    int page = 0,
+    int pageSize = 20,
+    String? search,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     final from = page * pageSize;
     final to = from + pageSize - 1;
 
-    final response = await _client
+    dynamic query = _client
         .from('inventory_logs')
-        .select('*, inventory_items(product_name)')
-        .order('created_at', ascending: false)
-        .range(from, to);
+        .select('id, item_id, item_name, item_code, action, description, created_at')
+        .order('created_at', ascending: false);
 
-    return (response as List)
+    if (startDate != null) {
+      query = query.gte('created_at', startDate.toUtc().toIso8601String());
+    }
+
+    if (endDate != null) {
+      final inclusiveEnd = DateTime(
+        endDate.year,
+        endDate.month,
+        endDate.day,
+        23,
+        59,
+        59,
+      ).toUtc();
+
+      query = query.lte('created_at', inclusiveEnd.toIso8601String());
+    }
+
+    final response = await query.range(from, to);
+
+    var logs = (response as List)
         .map((json) => InventoryLog.fromJson(json as Map<String, dynamic>))
         .toList();
+
+    final term = search?.trim().toLowerCase();
+
+    if (term != null && term.isNotEmpty) {
+      logs = logs.where((log) {
+        return log.description.toLowerCase().contains(term) ||
+            log.action.toLowerCase().contains(term) ||
+            (log.itemName ?? '').toLowerCase().contains(term) ||
+            (log.itemCode ?? '').toLowerCase().contains(term);
+      }).toList();
+    }
+
+    return logs;
   }
 
   Future<void> clearAllLogs() async {

@@ -263,16 +263,18 @@ class InventoryService {
 
     try {
       await _logService.createLog(
-        itemId: item.id,
-        action: 'Added',
-        description: _buildAddedLogDescription(
-          itemCode: itemCode,
-          quantity: quantity,
-          productName: productName,
-          departmentName: departmentName,
-          cedCategory: cedCategory,
-        ),
-      );
+  itemId: item.id,
+  itemName: item.productName,
+  itemCode: item.itemCode,
+  action: 'Added',
+  description: _buildAddedLogDescription(
+    itemCode: itemCode,
+    quantity: quantity,
+    productName: productName,
+    departmentName: departmentName,
+    cedCategory: cedCategory,
+  ),
+);
     } catch (_) {
       // Item was saved; don't fail the whole operation if logging fails.
     }
@@ -341,10 +343,12 @@ class InventoryService {
 
     try {
       await _logService.createLog(
-        itemId: updated.id,
-        action: 'Updated',
-        description: 'Updated $productName',
-      );
+  itemId: updated.id,
+  itemName: updated.productName,
+  itemCode: updated.itemCode,
+  action: 'Updated',
+  description: 'Updated $productName',
+);
     } catch (_) {}
 
     return updated;
@@ -360,10 +364,12 @@ class InventoryService {
         .eq('id', item.id);
 
     await _logService.createLog(
-      itemId: item.id,
-      action: 'Deleted',
-      description: 'Moved ${item.productName} to Deleted Items',
-    );
+  itemId: item.id,
+  itemName: item.productName,
+  itemCode: item.itemCode,
+  action: 'Deleted',
+  description: 'Moved ${item.productName} to Deleted Items',
+);
   }
 
   Future<void> restoreItem(InventoryItem item) async {
@@ -376,10 +382,12 @@ class InventoryService {
         .eq('id', item.id);
 
     await _logService.createLog(
-      itemId: item.id,
-      action: 'Restored',
-      description: 'Restored ${item.productName}',
-    );
+  itemId: item.id,
+  itemName: item.productName,
+  itemCode: item.itemCode,
+  action: 'Restored',
+  description: 'Restored ${item.productName}',
+);
   }
 
   Future<void> permanentlyDeleteItem(InventoryItem item) async {
@@ -388,10 +396,12 @@ class InventoryService {
     }
 
     await _logService.createLog(
-      itemId: item.id,
-      action: 'Permanently Deleted',
-      description: 'Permanently deleted ${item.productName}',
-    );
+  itemId: item.id,
+  itemName: item.productName,
+  itemCode: item.itemCode,
+  action: 'Permanently Deleted',
+  description: 'Permanently deleted ${item.productName}',
+);
 
     await _client.from('inventory_items').delete().eq('id', item.id);
   }
