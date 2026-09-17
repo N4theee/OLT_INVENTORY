@@ -6,6 +6,7 @@ import 'package:olt_inventory/models/inventory_item_model.dart';
 import 'package:olt_inventory/providers/inventory_provider.dart';
 import 'package:olt_inventory/providers/dashboard_provider.dart';
 import 'package:olt_inventory/screens/edit_inventory_screen.dart';
+import 'package:olt_inventory/screens/image_viewer_screen.dart';
 import 'package:olt_inventory/utils/date_formatter.dart';
 
 class ItemDetailsScreen extends StatefulWidget {
@@ -103,7 +104,7 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
               : ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    _DetailImage(imageUrl: _item!.imageUrl),
+                    _DetailImageGallery(imageUrls: _item!.imageUrls),
                     const SizedBox(height: 20),
                     Text(
                       _item!.productName,
@@ -159,28 +160,68 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
   }
 }
 
-class _DetailImage extends StatelessWidget {
-  const _DetailImage({this.imageUrl});
+class _DetailImageGallery extends StatefulWidget {
+  const _DetailImageGallery({required this.imageUrls});
 
-  final String? imageUrl;
+  final List<String> imageUrls;
+
+  @override
+  State<_DetailImageGallery> createState() => _DetailImageGalleryState();
+}
+
+class _DetailImageGalleryState extends State<_DetailImageGallery> {
+  int _currentIndex = 0;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: SizedBox(
-        height: 240,
-        width: double.infinity,
-        child: imageUrl != null && imageUrl!.isNotEmpty
-            ? CachedNetworkImage(
-                imageUrl: imageUrl!,
-                fit: BoxFit.cover,
-                placeholder: (_, __) =>
-                    const Center(child: CircularProgressIndicator()),
-                errorWidget: (_, __, ___) => _placeholder(),
-              )
-            : _placeholder(),
-      ),
+    if (widget.imageUrls.isEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(height: 240, child: _placeholder()),
+      );
+    }
+
+    return Column(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(
+            height: 240,
+            child: PageView.builder(
+              itemCount: widget.imageUrls.length,
+              onPageChanged: (index) => setState(() => _currentIndex = index),
+              itemBuilder: (context, index) => GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ImageViewerScreen(
+                      imageUrls: widget.imageUrls,
+                      initialIndex: index,
+                    ),
+                  ),
+                ),
+                child: CachedNetworkImage(
+                  imageUrl: widget.imageUrls[index],
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) =>
+                      const Center(child: CircularProgressIndicator()),
+                  errorWidget: (_, __, ___) => _placeholder(),
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (widget.imageUrls.length > 1) ...[
+          const SizedBox(height: 8),
+          Text('${_currentIndex + 1} of ${widget.imageUrls.length}'),
+        ],
+        const SizedBox(height: 4),
+        const Text(
+          'Tap image to view full size',
+          style: TextStyle(color: AppColors.mutedText, fontSize: 12),
+        ),
+      ],
     );
   }
 

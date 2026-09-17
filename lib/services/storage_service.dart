@@ -88,6 +88,21 @@ class StorageService {
     }
   }
 
+  Future<void> deleteImages(Iterable<String> imageUrls) async {
+    final paths = imageUrls
+        .map(_extractPath)
+        .whereType<String>()
+        .toSet()
+        .toList();
+    if (paths.isEmpty) return;
+
+    try {
+      await _client.storage.from(AppConstants.storageBucket).remove(paths);
+    } on StorageException {
+      // Ignore missing files during cleanup.
+    }
+  }
+
   String? _extractPath(String url) {
     final publicMarker =
         '/storage/v1/object/public/${AppConstants.storageBucket}/';

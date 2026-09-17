@@ -31,9 +31,9 @@ class _EditInventoryScreenState extends State<EditInventoryScreen> {
   late final TextEditingController _quantityController;
   late final TextEditingController _notesController;
 
-  XFile? _newImageFile;
-  Uint8List? _newImageBytes;
-  bool _removeImage = false;
+  late final List<String> _retainedImageUrls;
+  final List<XFile> _newImageFiles = [];
+  final List<Uint8List> _newImageBytes = [];
   late String? _departmentId;
   late String? _status;
   String? _cedCategory;
@@ -51,6 +51,7 @@ class _EditInventoryScreenState extends State<EditInventoryScreen> {
     _status = widget.item.status;
     _cedCategory = widget.item.cedCategory;
     _itemHolder = widget.item.itemHolder;
+    _retainedImageUrls = [...widget.item.imageUrls];
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<DepartmentProvider>().loadDepartments();
@@ -70,20 +71,39 @@ class _EditInventoryScreenState extends State<EditInventoryScreen> {
     return isCedDepartmentName(dept?.departmentName);
   }
 
-  Future<void> _pickImage(ImageSource source) async {
+  Future<void> _pickImages(ImageSource source) async {
     try {
-      final picked = await _picker.pickImage(
-        source: source,
-        maxWidth: 1200,
-        imageQuality: 85,
+      final remaining = 10 - _retainedImageUrls.length - _newImageFiles.length;
+      if (remaining == 0) return;
+      late final List<XFile> picked;
+      if (source == ImageSource.gallery) {
+        picked = await _picker.pickMultiImage(
+          maxWidth: 1200,
+          imageQuality: 85,
+        );
+      } else {
+        final image = await _picker.pickImage(
+          source: source,
+          maxWidth: 1200,
+          imageQuality: 85,
+        );
+        picked = image == null ? <XFile>[] : <XFile>[image];
+      }
+      final accepted = picked.take(remaining).toList();
+      final previews = await Future.wait(
+        accepted.map((image) => image.readAsBytes()),
       );
-      if (picked != null) {
-        final bytes = await picked.readAsBytes();
-        setState(() {
-          _newImageFile = picked;
-          _newImageBytes = bytes;
-          _removeImage = false;
-        });
+      if (!mounted) return;
+      setState(() {
+        _newImageFiles.addAll(accepted);
+        _newImageBytes.addAll(previews);
+      });
+      if (picked.length > remaining && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Only images up to the 10-image limit were added.'),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -115,8 +135,8 @@ class _EditInventoryScreenState extends State<EditInventoryScreen> {
               ? null
               : _notesController.text.trim(),
           cedCategory: isCed ? _cedCategory : null,
-          newImageFile: _newImageFile,
-          removeImage: _removeImage,
+          retainedImageUrls: _retainedImageUrls,
+          newImageFiles: _newImageFiles,
           departmentName: deptName,
         );
 
@@ -142,8 +162,7 @@ class _EditInventoryScreenState extends State<EditInventoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final showNetworkImage =
-        !_removeImage && _newImageBytes == null && widget.item.imageUrl != null;
+    final imageCount = _retainedImageUrls.length + _newImageFiles.length;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Edit Item')),
@@ -153,38 +172,27 @@ class _EditInventoryScreenState extends State<EditInventoryScreen> {
           key: _formKey,
           child: ListView(
             children: [
-              Container(
-                height: 180,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: AppColors.lightGrayCard,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.borderGray),
+              _EditableImageGallery(
+                retainedImageUrls: _retainedImageUrls,
+                newImageBytes: _newImageBytes,
+                onRemoveExisting: (index) => setState(
+                  () => _retainedImageUrls.removeAt(index),
                 ),
-                child: _newImageBytes != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.memory(_newImageBytes!, fit: BoxFit.cover),
-                      )
-                    : showNetworkImage
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: CachedNetworkImage(
-                              imageUrl: widget.item.imageUrl!,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                            ),
-                          )
-                        : const Center(
-                            child: Icon(Icons.inventory_2_outlined, size: 64),
-                          ),
+                onRemoveNew: (index) => setState(() {
+                  _newImageFiles.removeAt(index);
+                  _newImageBytes.removeAt(index);
+                }),
               ),
+              const SizedBox(height: 8),
+              Text('$imageCount/10 images', textAlign: TextAlign.center),
               const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => _pickImage(ImageSource.camera),
+                      onPressed: imageCount >= 10
+                          ? null
+                          : () => _pickImages(ImageSource.camera),
                       icon: const Icon(Icons.camera_alt),
                       label: const Text('Camera'),
                     ),
@@ -192,23 +200,15 @@ class _EditInventoryScreenState extends State<EditInventoryScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => _pickImage(ImageSource.gallery),
+                      onPressed: imageCount >= 10
+                          ? null
+                          : () => _pickImages(ImageSource.gallery),
                       icon: const Icon(Icons.photo_library),
                       label: const Text('Gallery'),
                     ),
                   ),
                 ],
               ),
-              if ((widget.item.imageUrl != null || _newImageBytes != null) &&
-                  !_removeImage)
-                TextButton(
-                  onPressed: () => setState(() {
-                    _removeImage = true;
-                    _newImageFile = null;
-                    _newImageBytes = null;
-                  }),
-                  child: const Text('Remove Image'),
-                ),
               const SizedBox(height: 16),
               TextFormField(
                 initialValue: widget.item.itemCode ?? 'Not assigned',
@@ -314,6 +314,83 @@ class _EditInventoryScreenState extends State<EditInventoryScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _EditableImageGallery extends StatelessWidget {
+  const _EditableImageGallery({
+    required this.retainedImageUrls,
+    required this.newImageBytes,
+    required this.onRemoveExisting,
+    required this.onRemoveNew,
+  });
+
+  final List<String> retainedImageUrls;
+  final List<Uint8List> newImageBytes;
+  final ValueChanged<int> onRemoveExisting;
+  final ValueChanged<int> onRemoveNew;
+
+  @override
+  Widget build(BuildContext context) {
+    if (retainedImageUrls.isEmpty && newImageBytes.isEmpty) {
+      return Container(
+        height: 180,
+        decoration: BoxDecoration(
+          color: AppColors.lightGrayCard,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.borderGray),
+        ),
+        child: const Center(
+          child: Icon(Icons.add_a_photo, size: 64, color: AppColors.mutedText),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 116,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: retainedImageUrls.length + newImageBytes.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final isExisting = index < retainedImageUrls.length;
+          final child = isExisting
+              ? CachedNetworkImage(
+                  imageUrl: retainedImageUrls[index],
+                  width: 116,
+                  height: 116,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) => const Icon(Icons.broken_image),
+                )
+              : Image.memory(
+                  newImageBytes[index - retainedImageUrls.length],
+                  width: 116,
+                  height: 116,
+                  fit: BoxFit.cover,
+                );
+
+          return Stack(
+            children: [
+              ClipRRect(borderRadius: BorderRadius.circular(10), child: child),
+              Positioned(
+                top: 4,
+                right: 4,
+                child: IconButton.filled(
+                  onPressed: () => isExisting
+                      ? onRemoveExisting(index)
+                      : onRemoveNew(index - retainedImageUrls.length),
+                  icon: const Icon(Icons.close, size: 18),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.black54,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

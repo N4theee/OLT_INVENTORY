@@ -9,6 +9,7 @@ class InventoryItem {
     required this.status,
     required this.itemHolder,
     this.imageUrl,
+    this.imageUrls = const [],
     this.notes,
     this.cedCategory,
     this.itemCode,
@@ -25,6 +26,7 @@ class InventoryItem {
   final String status;
   final String itemHolder;
   final String? imageUrl;
+  final List<String> imageUrls;
   final String? notes;
   final String? cedCategory;
   final String? itemCode;
@@ -40,6 +42,18 @@ class InventoryItem {
       deptName = departments['department_name'] as String?;
     }
 
+    final legacyImageUrl = json['image_url'] as String?;
+    final storedImageUrls = (json['image_urls'] as List?)
+            ?.whereType<String>()
+            .where((url) => url.isNotEmpty)
+            .toList() ??
+        const <String>[];
+    final allImageUrls = storedImageUrls.isNotEmpty
+        ? storedImageUrls
+        : legacyImageUrl != null && legacyImageUrl.isNotEmpty
+            ? <String>[legacyImageUrl]
+            : const <String>[];
+
     return InventoryItem(
       id: json['id'] as String,
       productName: json['product_name'] as String,
@@ -47,7 +61,8 @@ class InventoryItem {
       departmentId: json['department_id'] as String,
       status: json['status'] as String,
       itemHolder: json['item_holder'] as String? ?? AppConstants.defaultItemHolder,
-      imageUrl: json['image_url'] as String?,
+      imageUrl: allImageUrls.isEmpty ? null : allImageUrls.first,
+      imageUrls: allImageUrls,
       notes: json['notes'] as String?,
       cedCategory: json['ced_category'] as String?,
       itemCode: json['item_code'] as String?,
@@ -66,6 +81,7 @@ class InventoryItem {
       'status': status,
       'item_holder': itemHolder,
       'image_url': imageUrl,
+      'image_urls': imageUrls,
       'notes': notes,
       'ced_category': cedCategory,
       'item_code': itemCode,
@@ -83,6 +99,7 @@ class InventoryItem {
       'status': status,
       'item_holder': itemHolder,
       'image_url': imageUrl,
+      'image_urls': imageUrls,
       'notes': notes,
       'ced_category': cedCategory,
       'last_updated': lastUpdated.toIso8601String(),
@@ -97,6 +114,7 @@ class InventoryItem {
     String? status,
     String? itemHolder,
     String? imageUrl,
+    List<String>? imageUrls,
     String? notes,
     String? cedCategory,
     String? itemCode,
@@ -113,6 +131,7 @@ class InventoryItem {
       status: status ?? this.status,
       itemHolder: itemHolder ?? this.itemHolder,
       imageUrl: imageUrl ?? this.imageUrl,
+      imageUrls: imageUrls ?? this.imageUrls,
       notes: notes ?? this.notes,
       cedCategory: cedCategory ?? this.cedCategory,
       itemCode: itemCode ?? this.itemCode,

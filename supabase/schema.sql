@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS inventory_items (
   status TEXT NOT NULL CHECK (status IN ('Good condition', 'Needs repair', 'Depreciated')),
   item_holder TEXT NOT NULL DEFAULT 'Church' CHECK (item_holder IN ('Personal', 'Church')),
   image_url TEXT,
+  image_urls TEXT[] NOT NULL DEFAULT '{}' CHECK (cardinality(image_urls) <= 10),
   notes TEXT,
   ced_category TEXT CHECK (
     ced_category IS NULL

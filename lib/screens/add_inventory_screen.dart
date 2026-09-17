@@ -28,8 +28,8 @@ class _AddInventoryScreenState extends State<AddInventoryScreen> {
   final _notesController = TextEditingController();
   final _picker = ImagePicker();
 
-  XFile? _imageFile;
-  Uint8List? _imagePreviewBytes;
+  final List<XFile> _imageFiles = [];
+  final List<Uint8List> _imagePreviewBytes = [];
   String? _departmentId;
   String? _status;
   String? _cedCategory;
@@ -57,19 +57,37 @@ class _AddInventoryScreenState extends State<AddInventoryScreen> {
     return isCedDepartmentName(dept?.departmentName);
   }
 
-  Future<void> _pickImage(ImageSource source) async {
+  Future<void> _pickImages(ImageSource source) async {
     try {
-      final picked = await _picker.pickImage(
-        source: source,
-        maxWidth: 1200,
-        imageQuality: 85,
+      final remaining = 10 - _imageFiles.length;
+      if (remaining == 0) return;
+      late final List<XFile> picked;
+      if (source == ImageSource.gallery) {
+        picked = await _picker.pickMultiImage(
+          maxWidth: 1200,
+          imageQuality: 85,
+        );
+      } else {
+        final image = await _picker.pickImage(
+          source: source,
+          maxWidth: 1200,
+          imageQuality: 85,
+        );
+        picked = image == null ? <XFile>[] : <XFile>[image];
+      }
+      final accepted = picked.take(remaining).toList();
+      final previews = await Future.wait(
+        accepted.map((image) => image.readAsBytes()),
       );
-      if (picked != null) {
-        final bytes = await picked.readAsBytes();
-        setState(() {
-          _imageFile = picked;
-          _imagePreviewBytes = bytes;
-        });
+      if (!mounted) return;
+      setState(() {
+        _imageFiles.addAll(accepted);
+        _imagePreviewBytes.addAll(previews);
+      });
+      if (picked.length > remaining && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Only the first 10 images were added.')),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -100,7 +118,7 @@ class _AddInventoryScreenState extends State<AddInventoryScreen> {
               ? null
               : _notesController.text.trim(),
           cedCategory: isCed ? _cedCategory : null,
-          imageFile: _imageFile,
+          imageFiles: _imageFiles,
           departmentName: deptName,
         );
 
@@ -117,8 +135,8 @@ class _AddInventoryScreenState extends State<AddInventoryScreen> {
       );
       _formKey.currentState!.reset();
       setState(() {
-        _imageFile = null;
-        _imagePreviewBytes = null;
+        _imageFiles.clear();
+        _imagePreviewBytes.clear();
         _departmentId = null;
         _status = null;
         _cedCategory = null;
@@ -149,14 +167,16 @@ class _AddInventoryScreenState extends State<AddInventoryScreen> {
             children: [
               _ImagePickerSection(
                 previewBytes: _imagePreviewBytes,
-                onCamera: () => _pickImage(ImageSource.camera),
-                onGallery: () => _pickImage(ImageSource.gallery),
-                onRemove: _imagePreviewBytes == null
+                onCamera: _imageFiles.length >= 10
                     ? null
-                    : () => setState(() {
-                          _imageFile = null;
-                          _imagePreviewBytes = null;
-                        }),
+                    : () => _pickImages(ImageSource.camera),
+                onGallery: _imageFiles.length >= 10
+                    ? null
+                    : () => _pickImages(ImageSource.gallery),
+                onRemove: (index) => setState(() {
+                  _imageFiles.removeAt(index);
+                  _imagePreviewBytes.removeAt(index);
+                }),
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -282,59 +302,74 @@ class _ImagePickerSection extends StatelessWidget {
     required this.previewBytes,
     required this.onCamera,
     required this.onGallery,
-    this.onRemove,
+    required this.onRemove,
   });
 
-  final Uint8List? previewBytes;
-  final VoidCallback onCamera;
-  final VoidCallback onGallery;
-  final VoidCallback? onRemove;
+  final List<Uint8List> previewBytes;
+  final VoidCallback? onCamera;
+  final VoidCallback? onGallery;
+  final ValueChanged<int> onRemove;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Container(
-          height: 180,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: AppColors.lightGrayCard,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.borderGray),
-          ),
-          child: previewBytes != null
-              ? Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.memory(previewBytes!, fit: BoxFit.cover),
-                    ),
-                    if (onRemove != null)
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: IconButton.filled(
-                          style: IconButton.styleFrom(
-                            backgroundColor: Colors.black54,
-                          ),
-                          onPressed: onRemove,
-                          icon: const Icon(Icons.close, color: Colors.white),
-                        ),
-                      ),
-                  ],
-                )
-              : const Column(
+        if (previewBytes.isEmpty)
+          Container(
+            height: 180,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: AppColors.lightGrayCard,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.borderGray),
+            ),
+            child: const Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(Icons.add_a_photo,
                         size: 48, color: AppColors.mutedText),
                     SizedBox(height: 8),
-                    Text('Add Product Image',
+                    Text('Add up to 10 product images',
                         style: TextStyle(color: AppColors.mutedText)),
                   ],
                 ),
-        ),
+          )
+        else
+          SizedBox(
+            height: 116,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: previewBytes.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) => Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.memory(
+                      previewBytes[index],
+                      width: 116,
+                      height: 116,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: IconButton.filled(
+                      onPressed: () => onRemove(index),
+                      icon: const Icon(Icons.close, size: 18),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.black54,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        const SizedBox(height: 8),
+        Text('${previewBytes.length}/10 images'),
         const SizedBox(height: 12),
         Row(
           children: [

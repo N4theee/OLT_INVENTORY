@@ -205,19 +205,23 @@ class InventoryService {
     required String itemHolder,
     String? notes,
     String? cedCategory,
-    XFile? imageFile,
+    List<XFile> imageFiles = const [],
     required String departmentName,
   }) async {
-    String? imageUrl;
+    if (imageFiles.length > 10) {
+      throw Exception('An inventory item can have at most 10 images.');
+    }
 
-    if (imageFile != null) {
-      try {
-        imageUrl = await _storageService.uploadXFile(imageFile);
-      } catch (e) {
-        throw Exception(
-          'Image upload failed: ${StorageService.formatStorageError(e)}',
-        );
+    final imageUrls = <String>[];
+    try {
+      for (final imageFile in imageFiles) {
+        imageUrls.add(await _storageService.uploadXFile(imageFile));
       }
+    } catch (e) {
+      await _storageService.deleteImages(imageUrls);
+      throw Exception(
+        'Image upload failed: ${StorageService.formatStorageError(e)}',
+      );
     }
 
     final itemCode = await generateItemCode(
@@ -234,7 +238,8 @@ class InventoryService {
       'department_id': departmentId,
       'status': status,
       'item_holder': itemHolder,
-      'image_url': imageUrl,
+      'image_url': imageUrls.isEmpty ? null : imageUrls.first,
+      'image_urls': imageUrls,
       'notes': notes,
       'is_deleted': false,
     };
@@ -250,9 +255,7 @@ class InventoryService {
           .select('*')
           .single();
     } catch (e) {
-      if (imageUrl != null) {
-        await _storageService.deleteImage(imageUrl);
-      }
+      await _storageService.deleteImages(imageUrls);
       throw Exception(_formatError(e));
     }
 
@@ -291,27 +294,31 @@ class InventoryService {
     required String itemHolder,
     String? notes,
     String? cedCategory,
-    XFile? newImageFile,
-    bool removeImage = false,
+    List<String>? retainedImageUrls,
+    List<XFile> newImageFiles = const [],
     required String departmentName,
   }) async {
-    String? imageUrl = item.imageUrl;
-
-    if (removeImage && item.imageUrl != null) {
-      await _storageService.deleteImage(item.imageUrl);
-      imageUrl = null;
-    } else if (newImageFile != null) {
-      if (item.imageUrl != null) {
-        await _storageService.deleteImage(item.imageUrl);
-      }
-      try {
-        imageUrl = await _storageService.uploadXFile(newImageFile);
-      } catch (e) {
-        throw Exception(
-          'Image upload failed: ${StorageService.formatStorageError(e)}',
-        );
-      }
+    final retained = retainedImageUrls ?? item.imageUrls;
+    if (retained.length + newImageFiles.length > 10) {
+      throw Exception('An inventory item can have at most 10 images.');
     }
+
+    final uploadedImageUrls = <String>[];
+    try {
+      for (final imageFile in newImageFiles) {
+        uploadedImageUrls.add(await _storageService.uploadXFile(imageFile));
+      }
+    } catch (e) {
+      await _storageService.deleteImages(uploadedImageUrls);
+      throw Exception(
+        'Image upload failed: ${StorageService.formatStorageError(e)}',
+      );
+    }
+
+    final imageUrls = [...retained, ...uploadedImageUrls];
+    final removedImageUrls = item.imageUrls.where(
+      (url) => !retained.contains(url),
+    );
 
     final updatePayload = <String, dynamic>{
       'product_name': productName,
@@ -319,7 +326,8 @@ class InventoryService {
       'department_id': departmentId,
       'status': status,
       'item_holder': itemHolder,
-      'image_url': imageUrl,
+      'image_url': imageUrls.isEmpty ? null : imageUrls.first,
+      'image_urls': imageUrls,
       'notes': notes,
       'last_updated': DateTime.now().toUtc().toIso8601String(),
     };
@@ -329,12 +337,20 @@ class InventoryService {
       updatePayload['ced_category'] = null;
     }
 
-    final response = await _client
-        .from('inventory_items')
-        .update(updatePayload)
-        .eq('id', item.id)
-        .select('*')
-        .single();
+    Map<String, dynamic> response;
+    try {
+      response = await _client
+          .from('inventory_items')
+          .update(updatePayload)
+          .eq('id', item.id)
+          .select('*')
+          .single();
+    } catch (e) {
+      await _storageService.deleteImages(uploadedImageUrls);
+      rethrow;
+    }
+
+    await _storageService.deleteImages(removedImageUrls);
 
     final updated = InventoryItem.fromJson({
       ...response,
@@ -391,9 +407,7 @@ class InventoryService {
   }
 
   Future<void> permanentlyDeleteItem(InventoryItem item) async {
-    if (item.imageUrl != null) {
-      await _storageService.deleteImage(item.imageUrl);
-    }
+    await _storageService.deleteImages(item.imageUrls);
 
     await _logService.createLog(
   itemId: item.id,
@@ -407,10 +421,15 @@ class InventoryService {
   }
 
   Future<void> clearAllInventory() async {
-    final items = await _client.from('inventory_items').select('image_url');
+    final items =
+        await _client.from('inventory_items').select('image_url, image_urls');
 
     for (final row in items as List) {
-      await _storageService.deleteImage(row['image_url'] as String?);
+      final urls = (row['image_urls'] as List?)?.whereType<String>().toList() ??
+          <String>[];
+      final legacyUrl = row['image_url'] as String?;
+      if (urls.isEmpty && legacyUrl != null) urls.add(legacyUrl);
+      await _storageService.deleteImages(urls);
     }
 
     await _client
@@ -528,4 +547,3 @@ class InventoryService {
     return error.toString();
   }
 }
-

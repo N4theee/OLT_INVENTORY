@@ -133,7 +133,7 @@ class InventoryProvider extends ChangeNotifier {
     required String itemHolder,
     String? notes,
     String? cedCategory,
-    XFile? imageFile,
+    List<XFile> imageFiles = const [],
     required String departmentName,
   }) async {
     try {
@@ -145,7 +145,7 @@ class InventoryProvider extends ChangeNotifier {
         itemHolder: itemHolder,
         notes: notes,
         cedCategory: cedCategory,
-        imageFile: imageFile,
+        imageFiles: imageFiles,
         departmentName: departmentName,
       );
       await loadItems(refresh: true);
@@ -168,8 +168,8 @@ class InventoryProvider extends ChangeNotifier {
     required String itemHolder,
     String? notes,
     String? cedCategory,
-    XFile? newImageFile,
-    bool removeImage = false,
+    List<String>? retainedImageUrls,
+    List<XFile> newImageFiles = const [],
     required String departmentName,
   }) async {
     try {
@@ -182,8 +182,8 @@ class InventoryProvider extends ChangeNotifier {
         itemHolder: itemHolder,
         notes: notes,
         cedCategory: cedCategory,
-        newImageFile: newImageFile,
-        removeImage: removeImage,
+        retainedImageUrls: retainedImageUrls,
+        newImageFiles: newImageFiles,
         departmentName: departmentName,
       );
       await loadItems(refresh: true);
