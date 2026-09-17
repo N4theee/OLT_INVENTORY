@@ -7,6 +7,7 @@ import 'package:olt_inventory/providers/department_provider.dart';
 import 'package:olt_inventory/providers/inventory_provider.dart';
 import 'package:olt_inventory/screens/dashboard_screen.dart';
 import 'package:olt_inventory/services/supabase_service.dart';
+import 'package:olt_inventory/widgets/app_safe_area.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +30,8 @@ class OltInventoryApp extends StatelessWidget {
         title: AppConstants.appName,
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
+        builder: (context, child) =>
+            AppSafeArea(child: child ?? const SizedBox.shrink()),
         home: const AppInitializer(),
       ),
     );

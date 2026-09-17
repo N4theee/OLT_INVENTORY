@@ -14,14 +14,16 @@ import 'package:olt_inventory/widgets/ced_category_dropdown.dart';
 import 'package:olt_inventory/widgets/responsive_content.dart';
 
 class ReportsScreen extends StatefulWidget {
-  const ReportsScreen({super.key});
+  const ReportsScreen({super.key, this.reportService});
+
+  final ReportService? reportService;
 
   @override
   State<ReportsScreen> createState() => _ReportsScreenState();
 }
 
 class _ReportsScreenState extends State<ReportsScreen> {
-  final _reportService = ReportService();
+  late final _reportService = widget.reportService ?? ReportService();
 
   String? _departmentId;
   String? _cedCategory;
@@ -53,8 +55,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       final deptProvider = context.read<DepartmentProvider>();
       final deptName = _departmentId == null
           ? 'All Departments'
-          : deptProvider.findById(_departmentId!)?.departmentName ??
-              'Unknown';
+          : deptProvider.findById(_departmentId!)?.departmentName ?? 'Unknown';
 
       final data = await _reportService.generateReport(
         departmentId: _departmentId,
@@ -88,9 +89,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
       await ReportPdfService.printReport(_reportData!);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Print failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Print failed: $e')));
       }
     }
   }
@@ -103,9 +104,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
       await ReportPdfService.shareReport(_reportData!);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('PDF save failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('PDF save failed: $e')));
       }
     }
   }
@@ -118,9 +119,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
       await ReportCsvService.shareCsv(_reportData!);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('CSV download failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('CSV download failed: $e')));
       }
     }
   }
@@ -136,8 +137,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
           return ResponsiveContent(
             padding: EdgeInsets.all(responsivePadding(context)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            child: ListView(
+              padding: EdgeInsets.zero,
               children: [
                 if (isWide)
                   Row(
@@ -156,10 +157,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         ),
                       ),
                       const SizedBox(width: 16),
-                      Expanded(
-                        flex: 3,
-                        child: _buildPreviewArea(),
-                      ),
+                      Expanded(flex: 3, child: _buildPreviewArea()),
                     ],
                   )
                 else ...[
@@ -173,7 +171,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     isLoading: _isLoading,
                   ),
                   const SizedBox(height: 16),
-                  Expanded(child: _buildPreviewArea()),
+                  _buildPreviewArea(),
                 ],
                 const SizedBox(height: 12),
                 _ActionButtons(
@@ -311,9 +309,9 @@ class _FilterCard extends StatelessWidget {
           children: [
             Text(
               'Report Filters',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             const Text(
@@ -413,7 +411,7 @@ class _ReportPreview extends StatelessWidget {
     final isNarrow = width < 600;
 
     return Card(
-      child: SingleChildScrollView(
+      child: Padding(
         padding: EdgeInsets.all(isNarrow ? 12 : 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -441,10 +439,7 @@ class _ReportPreview extends StatelessWidget {
                   const Divider(),
                   const Text(
                     'INVENTORY REPORT',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const Divider(),
                 ],
@@ -547,12 +542,14 @@ class _ReportPreview extends StatelessWidget {
                       final item = entry.value;
                       return DataRow(
                         cells: [
-                          DataCell(Text(
-                            InventoryReportData.itemIdDisplay(
-                              item,
-                              entry.key + 1,
+                          DataCell(
+                            Text(
+                              InventoryReportData.itemIdDisplay(
+                                item,
+                                entry.key + 1,
+                              ),
                             ),
-                          )),
+                          ),
                           DataCell(Text(item.productName)),
                           DataCell(Text(InventoryReportData.itemDetails(item))),
                           DataCell(Text(item.status)),
@@ -649,7 +646,9 @@ class _SummaryRow extends StatelessWidget {
       children: items
           .map(
             (item) => Container(
-              width: isNarrow ? (MediaQuery.sizeOf(context).width / 2 - 36) : 110,
+              width: isNarrow
+                  ? (MediaQuery.sizeOf(context).width / 2 - 36)
+                  : 110,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 border: Border.all(color: AppColors.borderGray),

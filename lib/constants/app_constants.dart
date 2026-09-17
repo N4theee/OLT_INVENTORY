@@ -10,7 +10,8 @@ class AppConstants {
 
   // Replace with your Supabase project credentials.
   static const String supabaseUrl = 'https://fceziclpidheawsbepxd.supabase.co';
-  static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZjZXppY2xwaWRoZWF3c2JlcHhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMTkxMTEsImV4cCI6MjA5NzY5NTExMX0.LeO85adeZ-Fcp-Uoy9VpvziJYze3l_XCCOf6WJ2VV8E';
+  static const String supabaseAnonKey =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZjZXppY2xwaWRoZWF3c2JlcHhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMTkxMTEsImV4cCI6MjA5NzY5NTExMX0.LeO85adeZ-Fcp-Uoy9VpvziJYze3l_XCCOf6WJ2VV8E';
 
   static const String storageBucket = 'inventory-images';
 
@@ -65,7 +66,9 @@ class AppConstants {
     "Women's Department",
     'Youth Department',
     'CED',
-    'Uncategorized',
+    'Care Department',
+    'Intercessory Department',
+    'General',
   ];
 
   static const Map<String, String> departmentCodes = {
@@ -75,6 +78,10 @@ class AppConstants {
     "Women's Department": 'WOM',
     'Youth Department': 'YOF',
     'CED': 'CED',
+    'Care Department': 'CAR',
+    'Intercessory Department': 'INT',
+    'General': 'GEN',
+    // Keep older department data compatible until its database is migrated.
     'Uncategorized': 'UNC',
   };
 

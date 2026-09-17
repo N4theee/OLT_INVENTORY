@@ -61,7 +61,8 @@ class InventoryReportData {
     required List<InventoryItem> items,
     String? cedCategoryFilter,
   }) {
-    final isCed = filterDepartmentName == 'CED' ||
+    final isCed =
+        filterDepartmentName == 'CED' ||
         (cedCategoryFilter != null && cedCategoryFilter.isNotEmpty);
 
     int totalQuantity = 0;
@@ -77,7 +78,7 @@ class InventoryReportData {
 
     for (final item in items) {
       totalQuantity += item.quantity;
-      final dept = item.departmentName ?? 'Uncategorized';
+      final dept = item.departmentName ?? 'General';
 
       final deptEntry = deptMap[dept];
       deptMap[dept] = (
@@ -102,16 +103,17 @@ class InventoryReportData {
       }
     }
 
-    final departmentStats = deptMap.entries
-        .map(
-          (e) => ReportDepartmentStat(
-            departmentName: e.key,
-            totalItems: e.value.items,
-            totalQuantity: e.value.qty,
-          ),
-        )
-        .toList()
-      ..sort((a, b) => a.departmentName.compareTo(b.departmentName));
+    final departmentStats =
+        deptMap.entries
+            .map(
+              (e) => ReportDepartmentStat(
+                departmentName: e.key,
+                totalItems: e.value.items,
+                totalQuantity: e.value.qty,
+              ),
+            )
+            .toList()
+          ..sort((a, b) => a.departmentName.compareTo(b.departmentName));
 
     final statusStats = <ReportStatusStat>[
       ReportStatusStat(
@@ -152,8 +154,8 @@ class InventoryReportData {
     final reportType = cedCategoryFilter != null
         ? 'CED Department Report ($cedCategoryFilter)'
         : filterDepartmentName == 'All Departments'
-            ? 'Full Inventory Report'
-            : 'Department Inventory Report';
+        ? 'Full Inventory Report'
+        : 'Department Inventory Report';
 
     return InventoryReportData(
       filterDepartmentName: cedCategoryFilter != null

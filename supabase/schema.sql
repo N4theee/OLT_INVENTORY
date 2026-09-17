@@ -60,7 +60,9 @@ INSERT INTO departments (department_name) VALUES
   ('Women''s Department'),
   ('Youth Department'),
   ('CED'),
-  ('Uncategorized')
+  ('Care Department'),
+  ('Intercessory Department'),
+  ('General')
 ON CONFLICT (department_name) DO NOTHING;
 
 -- Storage bucket (run in Supabase Dashboard > Storage or via API)
