@@ -4,7 +4,7 @@ import 'package:olt_inventory/services/supabase_service.dart';
 
 class LogService {
   LogService({SupabaseClient? client})
-      : _client = client ?? SupabaseService.client;
+    : _client = client ?? SupabaseService.client;
 
   final SupabaseClient _client;
 
@@ -34,46 +34,52 @@ class LogService {
     final from = page * pageSize;
     final to = from + pageSize - 1;
 
-    dynamic query = _client
+    var query = _client
         .from('inventory_logs')
-        .select('id, item_id, item_name, item_code, action, description, created_at')
-        .order('created_at', ascending: false);
+        .select(
+          'id, item_id, item_name, item_code, action, description, created_at',
+        );
 
     if (startDate != null) {
       query = query.gte('created_at', startDate.toUtc().toIso8601String());
     }
 
     if (endDate != null) {
-      final inclusiveEnd = DateTime(
+      final exclusiveEnd = DateTime(
         endDate.year,
         endDate.month,
-        endDate.day,
-        23,
-        59,
-        59,
+        endDate.day + 1,
       ).toUtc();
 
-      query = query.lte('created_at', inclusiveEnd.toIso8601String());
+      query = query.lt('created_at', exclusiveEnd.toIso8601String());
     }
 
-    final response = await query.range(from, to);
-
-    var logs = (response as List)
-        .map((json) => InventoryLog.fromJson(json as Map<String, dynamic>))
-        .toList();
-
-    final term = search?.trim().toLowerCase();
+    final term = search?.trim();
 
     if (term != null && term.isNotEmpty) {
-      logs = logs.where((log) {
-        return log.description.toLowerCase().contains(term) ||
-            log.action.toLowerCase().contains(term) ||
-            (log.itemName ?? '').toLowerCase().contains(term) ||
-            (log.itemCode ?? '').toLowerCase().contains(term);
-      }).toList();
+      // Quote PostgREST values so punctuation cannot change the filter.
+      final escaped = term
+          .replaceAll('\\', '\\\\')
+          .replaceAll('"', '\\"')
+          .replaceAll('%', '\\%')
+          .replaceAll('_', '\\_')
+          .replaceAll('*', '\\*');
+      final pattern = '"%$escaped%"';
+      query = query.or(
+        [
+          'description',
+          'action',
+          'item_name',
+          'item_code',
+        ].map((field) => '$field.ilike.$pattern').join(','),
+      );
     }
 
-    return logs;
+    final response = await query
+        .order('created_at', ascending: false)
+        .order('id', ascending: false)
+        .range(from, to);
+    return response.map(InventoryLog.fromJson).toList();
   }
 
   Future<void> clearAllLogs() async {

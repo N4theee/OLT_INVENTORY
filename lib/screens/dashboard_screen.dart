@@ -5,6 +5,7 @@ import 'package:olt_inventory/models/department_model.dart';
 import 'package:olt_inventory/providers/dashboard_provider.dart';
 import 'package:olt_inventory/widgets/app_drawer.dart';
 import 'package:olt_inventory/widgets/dashboard_card.dart';
+import 'package:olt_inventory/widgets/dashboard_charts.dart';
 import 'package:olt_inventory/widgets/responsive_content.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -39,10 +40,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           }
 
           if (provider.error != null && provider.stats.isEmpty) {
-            return _ErrorState(
-              message: provider.error!,
-              onRetry: _refresh,
-            );
+            return _ErrorState(message: provider.error!, onRetry: _refresh);
           }
 
           return RefreshIndicator(
@@ -55,6 +53,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const _SectionTitle('Overview'),
                   const SizedBox(height: 12),
                   _OverviewGrid(stats: provider.stats),
+                  const SizedBox(height: 24),
+                  DashboardCharts(
+                    stats: provider.stats,
+                    departments: provider.departmentStats,
+                  ),
                   const SizedBox(height: 24),
                   _DepartmentBreakdownSection(
                     departments: provider.departmentStats,
@@ -130,8 +133,9 @@ class _DepartmentBreakdownSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeDepartments =
-        departments.where((d) => d.itemCount > 0).toList();
+    final activeDepartments = departments
+        .where((d) => d.itemCount > 0)
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -189,9 +193,9 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       title,
       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: AppColors.darkText,
-          ),
+        fontWeight: FontWeight.bold,
+        color: AppColors.darkText,
+      ),
     );
   }
 }

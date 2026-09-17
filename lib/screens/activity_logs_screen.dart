@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'package:intl/intl.dart';
+import 'package:olt_inventory/utils/history_date_filter.dart';
 import 'package:flutter/material.dart';
 import 'package:olt_inventory/constants/app_colors.dart';
 import 'package:olt_inventory/models/inventory_log_model.dart';
@@ -7,14 +10,17 @@ import 'package:olt_inventory/widgets/app_drawer.dart';
 import 'package:olt_inventory/widgets/search_bar_widget.dart';
 
 class ActivityLogsScreen extends StatefulWidget {
-  const ActivityLogsScreen({super.key});
+  const ActivityLogsScreen({super.key, this.logService});
+  final LogService? logService;
 
   @override
   State<ActivityLogsScreen> createState() => _ActivityLogsScreenState();
 }
 
 class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
-  final _logService = LogService();
+  late final _logService = widget.logService ?? LogService();
+  Timer? _searchDebounce;
+  int _requestId = 0;
   final _scrollController = ScrollController();
   final _searchController = TextEditingController();
 
@@ -38,6 +44,7 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -51,14 +58,16 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
   }
 
   Future<void> _loadLogs({bool refresh = false}) async {
-    if (_isLoading) return;
+    if (_isLoading && !refresh) return;
     if (!_hasMore && !refresh) return;
 
+    final requestId = ++_requestId;
     setState(() {
       _isLoading = true;
       _error = null;
 
       if (refresh) {
+        _logs = [];
         _page = 0;
         _hasMore = true;
       }
@@ -74,7 +83,7 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
         endDate: _endDate,
       );
 
-      if (!mounted) return;
+      if (!mounted || requestId != _requestId) return;
 
       setState(() {
         if (refresh) {
@@ -89,7 +98,7 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || requestId != _requestId) return;
 
       setState(() {
         _error = e.toString().replaceFirst('Exception: ', '');
@@ -99,31 +108,42 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
   }
 
   void _setSearch(String value) {
+    _searchDebounce?.cancel();
     _search = value;
-    _loadLogs(refresh: true);
+    // Invalidate old responses immediately, including during the debounce.
+    _requestId++;
+    setState(() {
+      _logs = [];
+      _isLoading = true;
+      _error = null;
+    });
+    _searchDebounce = Timer(
+      const Duration(milliseconds: 300),
+      () => _loadLogs(refresh: true),
+    );
   }
 
-  void _setPresetDateFilter(String filter) {
-    final now = DateTime.now();
+  Future<void> _setPresetDateFilter(String filter) async {
+    if (filter == 'all') {
+      _applyDates('all', null);
+      return;
+    }
+    final picked = await pickHistoryPeriod(
+      context,
+      filter,
+      _startDate ?? DateTime.now(),
+    );
+    if (!mounted || picked == null) return;
+    _applyDates(filter, historyPeriod(filter, picked));
+  }
 
+  void _applyDates(String filter, DateTimeRange? dates) {
+    _searchDebounce?.cancel();
     setState(() {
       _activeDateFilter = filter;
-
-      if (filter == 'all') {
-        _startDate = null;
-        _endDate = null;
-      } else if (filter == 'day') {
-        _startDate = DateTime(now.year, now.month, now.day);
-        _endDate = DateTime(now.year, now.month, now.day);
-      } else if (filter == 'month') {
-        _startDate = DateTime(now.year, now.month, 1);
-        _endDate = DateTime(now.year, now.month + 1, 0);
-      } else if (filter == 'year') {
-        _startDate = DateTime(now.year, 1, 1);
-        _endDate = DateTime(now.year, 12, 31);
-      }
+      _startDate = dates?.start;
+      _endDate = dates?.end;
     });
-
     _loadLogs(refresh: true);
   }
 
@@ -132,38 +152,33 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
 
     final picked = await showDateRangePicker(
       context: context,
-      firstDate: DateTime(now.year - 10),
-      lastDate: DateTime(now.year + 1),
+      firstDate: DateTime(1900),
+      lastDate: DateTime(now.year + 1, 12, 31),
       initialDateRange: _startDate != null && _endDate != null
           ? DateTimeRange(start: _startDate!, end: _endDate!)
           : null,
     );
 
-    if (picked == null) return;
-
-    setState(() {
-      _activeDateFilter = 'custom';
-      _startDate = picked.start;
-      _endDate = picked.end;
-    });
-
-    _loadLogs(refresh: true);
+    if (!mounted || picked == null) return;
+    _applyDates('custom', picked);
   }
 
   String _dateRangeLabel() {
-    if (_startDate == null || _endDate == null) {
-      return 'Calendar';
+    if (_startDate == null || _endDate == null) return 'All dates';
+    if (_activeDateFilter == 'day') {
+      return DateFormatter.formatDate(_startDate!);
     }
-
-    return '${DateFormatter.formatDate(_startDate!)} - ${DateFormatter.formatDate(_endDate!)}';
+    if (_activeDateFilter == 'month') {
+      return DateFormat.yMMMM().format(_startDate!);
+    }
+    if (_activeDateFilter == 'year') return '${_startDate!.year}';
+    return '${DateFormatter.formatDate(_startDate!)} – ${DateFormatter.formatDate(_endDate!)}';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Activity Logs'),
-      ),
+      appBar: AppBar(title: const Text('Activity Logs')),
       drawer: const AppDrawer(currentRoute: '/logs'),
       body: Column(
         children: [
@@ -214,7 +229,7 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
                       ),
                       const SizedBox(width: 8),
                       FilterChip(
-                        label: Text(_dateRangeLabel()),
+                        label: const Text('Date range'),
                         selected: _activeDateFilter == 'custom',
                         avatar: const Icon(Icons.calendar_month, size: 18),
                         onSelected: (_) => _pickDateRange(),
@@ -225,9 +240,17 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
               ],
             ),
           ),
-          Expanded(
-            child: _buildLogsBody(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                _dateRangeLabel(),
+                style: const TextStyle(color: AppColors.mutedText),
+              ),
+            ),
           ),
+          Expanded(child: _buildLogsBody()),
         ],
       ),
     );
@@ -241,11 +264,7 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                Icons.cloud_off,
-                size: 48,
-                color: AppColors.mutedText,
-              ),
+              const Icon(Icons.cloud_off, size: 48, color: AppColors.mutedText),
               const SizedBox(height: 16),
               Text(
                 'Could not load activity logs',
@@ -281,11 +300,24 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
       color: AppColors.primaryGold,
       child: ListView.separated(
         controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        itemCount: _logs.length + (_hasMore ? 1 : 0),
-        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemCount: _logs.length + ((_hasMore || _error != null) ? 1 : 0),
+        separatorBuilder: (_, _) => const SizedBox(height: 8),
         itemBuilder: (context, index) {
           if (index >= _logs.length) {
+            if (!_isLoading) {
+              return Center(
+                child: TextButton(
+                  onPressed: () => _loadLogs(),
+                  child: Text(
+                    _error != null
+                        ? 'Could not load more. Tap to retry'
+                        : 'Load more',
+                  ),
+                ),
+              );
+            }
             return const Center(
               child: Padding(
                 padding: EdgeInsets.all(16),
@@ -328,7 +360,7 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
                   Text(log.description),
                   const SizedBox(height: 4),
                   Text(
-                    '${log.action} • ${DateFormatter.formatDateTime(log.createdAt)}',
+                    '${log.action} • ${DateFormatter.formatDateTime(log.createdAt.toLocal())}',
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppColors.mutedText,
